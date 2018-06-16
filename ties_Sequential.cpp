@@ -2,6 +2,7 @@
     Usage: ties_sequential inputFilename outputFilename samplingRatio
     About: Code to create a sample graph from an input graph with final number of nodes based on a sampling ratio.
            Algorithm used is TIES (Totally induced edge sampling), based on https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=2743&context=cstech
+    Compile with: g++ -std=c++11 ties_sequential.cpp -o ties_sequential.o
 */
 #include<iostream>
 #include<fstream>
