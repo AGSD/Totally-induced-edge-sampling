@@ -2,7 +2,9 @@
 Implementation of TIES graph sampling algorithm
 
 ties_sequential uses the TIES algorithm to find a sample from a given input graph.
+
 Usage: ties_sequential inputFilename outputFilename samplingRatio
+
 The code expects the input file to have edges represented with 2 numbers, specifying the 2 nodes between which the edge exists.
 There must be 1 line for representing each edge.
 
