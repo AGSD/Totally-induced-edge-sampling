@@ -7,11 +7,8 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
-#include<algorithm>
-#include<set>
 #include<random>
 #include<string>
-#include<cstdlib>
 
 //For verbose comments
 #define vbs(x) x
@@ -32,24 +29,6 @@ struct graph{
 	int *ei;
 };
 
-struct CustomCompare
-{
-    bool operator()(const edge& e1, const edge& e2)
-    {
-         if(e1.u == e2.u){
-            if(e1.v < e2.v){
-                return true;
-            }
-            else
-                return false;
-        }
-        else if(e1.u < e2.u)
-            return true;
-        else
-            return false;
-    }
-};
-
 long inputGraph(string, vector<edge>&);
 void make_csr(vector<edge>,graph&,long,long);
 void sampleEdges(vector<edge>&, vector<long>&, bool*, long, long, double);
@@ -64,7 +43,6 @@ int main(int argc, char* argv[]) {
     string outFilename;
     double fi;
     parseCommandlineArgs(argc, argv, inFilename, outFilename, fi);
-
 
     vector<edge> edgeList;
     vector<long> Vs;	//del
