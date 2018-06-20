@@ -22,9 +22,14 @@ class edge{
 public:
     int u,v;
     edge(int a, int b){ //for consistency, smaller of the two will be put in u, larger in v
-        u = min(a,b);
-        v = max(a,b);
+        u = a;
+        v = b;
     }
+};
+
+struct graph{
+	int *vi;
+	int *ei;
 };
 
 struct CustomCompare
@@ -46,9 +51,10 @@ struct CustomCompare
 };
 
 long inputGraph(string, vector<edge>&);
-void sampleEdges(const vector<edge>&, set<long>&, long, long, double);
-void induceEdges(const vector<edge>&, set<long>&, set<edge,CustomCompare>&, long);
-void writeGraph(string,set<edge,CustomCompare>&);
+void make_csr(vector<edge>,graph&,long,long);
+void sampleEdges(vector<edge>&, vector<long>&, bool*, long, long, double);
+void induceEdges(vector<long>&, graph&, bool*, vector<edge>&, long);
+void writeGraph(string,vector<edge>&);
 void parseCommandlineArgs(int,char* [], string&, string&, double&);
 
 int main(int argc, char* argv[]) {
@@ -61,8 +67,7 @@ int main(int argc, char* argv[]) {
 
 
     vector<edge> edgeList;
-    set<long> Vs;
-    set<edge,CustomCompare> Es;
+    vector<long> Vs;	//del
 
     long n, m;
 
@@ -72,10 +77,19 @@ int main(int argc, char* argv[]) {
     m = edgeList.size();
     vbs(cout<<"Input succeeded, graph has "<<n<<" nodes and "<<m<<" edges"<<endl;)
 
-    sampleEdges(edgeList,Vs,n,m,fi);
+	graph g;
+	g.vi = new int[n+2]();
+	g.ei = new int[2*m+1]();
+    bool *vExist = new bool[n+1]();
+
+	make_csr(edgeList, g, n, m);
+
+    sampleEdges(edgeList, Vs, vExist, n, m, fi);
     vbs(cout<<"Sampled edges"<<endl;)
 
-    induceEdges(edgeList, Vs, Es, m);
+    vector<edge> Es;
+
+    induceEdges(Vs, g, vExist, Es, n);
     vbs(cout<<"Induced edges, final count is "<<Es.size()<<" edges"<<endl;)
 
     writeGraph(outFilename, Es);
@@ -111,37 +125,76 @@ long inputGraph(string filename, vector<edge> &el){ //creates the edge list in t
     return maxNode;
 }
 
-void sampleEdges(const vector<edge> &el, set<long> &Vs, long n, long m, double fi){
+void make_csr(vector<edge> el, graph &g, long n, long m){
+    long i;
+    for(i=0; i<m; ++i){
+        long u = el[i].u;
+        long v = el[i].v;
+        g.vi[u]++;
+        g.vi[v]++;
+    }
+    for(i=1; i<n+1; ++i){
+        g.vi[i] += g.vi[i-1];
+    }
+    for(i=0; i<m; ++i){
+        long u = el[i].u;
+        long v = el[i].v;
+        g.ei[g.vi[u]--] = v;
+        g.ei[g.vi[v]--] = u;
+    }
+    for(i=1; i<n; ++i)
+        g.vi[i] += 1;
+    g.vi[0] = 0;
+    g.vi[n+1] = 2*m+1;
+}
+
+void sampleEdges(vector<edge> &el, vector<long> &Vs, bool* vExist, long n, long m, double fi){
     default_random_engine generator;
-    uniform_int_distribution<long> distribution(1,m);
     long rnd;
+    long lastValid = el.size()-1;
 
     while(Vs.size() < fi*n){
+        uniform_int_distribution<long> distribution(0,lastValid);
         rnd = distribution(generator);
-        Vs.insert(el[rnd].u);
-        Vs.insert(el[rnd].v);
-    }
-}
-
-void induceEdges(const vector<edge>&el, set<long>&Vs, set<edge,CustomCompare>&Es, long m){
-    long a,b;
-    long i;
-
-    for(i=0; i<m; ++i){
-        a = el[i].u;
-        b = el[i].v;
-        if(Vs.find(a) != Vs.end() && Vs.find(b) != Vs.end()){   //edge is present
-            Es.insert(edge(a,b));
+        long u = el[rnd].u;
+        long v = el[rnd].v;
+        if(!vExist[u]){
+            vExist[u] = true;
+            Vs.push_back(u);
         }
+        if(!vExist[v]){
+            vExist[v] = true;
+            Vs.push_back(v);
+        }
+
+        swap(el[lastValid],el[rnd]);
+        --lastValid;
     }
 }
 
-void writeGraph(string filename,set<edge,CustomCompare> &Es){
+void induceEdges(vector<long> &Vs, graph &g, bool* vExist, vector<edge> &Es, long n){
+    bool *vChecked = new bool[n+1]();
+    long i,j;
+    for(i=0; i<Vs.size(); ++i){
+        long curV = Vs[i];
+        long start = g.vi[curV];
+        long stop  = g.vi[curV+1];
+        for(j=start; j<stop; ++j){
+            cout<<"start/stop: "<<start<<" "<<stop<<endl;
+            long desV = g.ei[j];
+            if(!vChecked[desV] && vExist[desV])
+                Es.push_back(edge(curV,desV));
+        }
+        vChecked[curV] = true;
+    }
+}
+
+
+void writeGraph(string filename,vector<edge> &Es){
     ofstream out(filename,ofstream::out);
-    set<edge,CustomCompare>::iterator itr;
+    vector<edge>::iterator itr;
     for(itr = Es.begin(); itr!=Es.end(); ++itr){
         out<<itr->u<<" "<<itr->v<<endl;
     }
     out.close();
 }
-

@@ -3,4 +3,3 @@ Sourced from http://konect.uni-koblenz.de/networks/
 			Nodes		Edges
 Youtube		1,134,890	2,987,624
 Powergrid	4,941		6,594
-Physicians	241			1,098
