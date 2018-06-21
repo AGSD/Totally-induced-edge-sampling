@@ -1,5 +1,5 @@
 # Totally-induced-edge-sampling
-Implementation of TIES graph sampling algorithm
+Implementation of TIES graph sampling algorithm, sourced from https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=2743&context=cstech
 
 ties_sequential uses the TIES algorithm to find a sample from a given input graph.
 
