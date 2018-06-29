@@ -29,6 +29,8 @@ struct graph{
 	int *ei;
 };
 
+bool undirected = false;
+
 long inputGraph(string, vector<edge>&);
 void make_csr(vector<edge>,graph&,long,long);
 void sampleEdges(vector<edge>&, vector<long>&, bool*, long, long, double);
@@ -54,6 +56,7 @@ int main(int argc, char* argv[]) {
     n = inputGraph(inFilename,edgeList);
     m = edgeList.size();
     vbs(cout<<"Input succeeded, graph has "<<n<<" nodes and "<<m<<" edges"<<endl;)
+    vbs(if(undirected)cout<<"Considering input as undirected graph"<<endl;)
 
 	graph g;
 	g.vi = new int[n+2]();
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
     vector<edge> Es;
 
     induceEdges(Vs, g, vExist, Es, n);
-    vbs(cout<<"Induced edges, final count is "<<Es.size()<<" edges"<<endl;)
+    vbs(cout<<"Induced edges, final count is "<<Vs.size()<<" nodes, and "<<Es.size()<<" edges"<<endl;)
 
     writeGraph(outFilename, Es);
     vbs(cout<<"Output graph written to "<<outFilename<<endl;)
@@ -77,13 +80,19 @@ int main(int argc, char* argv[]) {
 }
 
 void parseCommandlineArgs(int argc, char* argv[], string &in, string &out, double &fi){
-    if(argc != 4){
-        cout<<"Usage: ties_sequential inputFilename outputFilename samplingRatio";
+    if(argc < 4 || argc > 5){
+        cout<<"Usage: ties_sequential inputFilename outputFilename samplingRatio [-u (flag for undirected graph)]";
         exit(1);
     }
     in = argv[1];
     out = argv[2];
     fi = atof(argv[3]);
+    if(argc == 5){
+        string u = argv[4];
+        if(u.compare("-u")==0)
+            undirected = true;
+
+    }
 }
 
 long inputGraph(string filename, vector<edge> &el){ //creates the edge list in the passed vector, and returns the number of nodes(maximum node found in any edge)
@@ -109,7 +118,8 @@ void make_csr(vector<edge> el, graph &g, long n, long m){
         long u = el[i].u;
         long v = el[i].v;
         g.vi[u]++;
-        g.vi[v]++;
+        if(undirected)
+            g.vi[v]++;
     }
     for(i=1; i<n+1; ++i){
         g.vi[i] += g.vi[i-1];
@@ -118,12 +128,16 @@ void make_csr(vector<edge> el, graph &g, long n, long m){
         long u = el[i].u;
         long v = el[i].v;
         g.ei[g.vi[u]--] = v;
-        g.ei[g.vi[v]--] = u;
+        if(undirected)
+            g.ei[g.vi[v]--] = u;
     }
     for(i=1; i<n; ++i)
         g.vi[i] += 1;
     g.vi[0] = 0;
-    g.vi[n+1] = 2*m+1;
+    if(undirected)
+        g.vi[n+1] = 2*m+1;
+    else
+        g.vi[n+1] = m+1;
 }
 
 void sampleEdges(vector<edge> &el, vector<long> &Vs, bool* vExist, long n, long m, double fi){
@@ -158,9 +172,10 @@ void induceEdges(vector<long> &Vs, graph &g, bool* vExist, vector<edge> &Es, lon
         long start = g.vi[curV];
         long stop  = g.vi[curV+1];
         for(j=start; j<stop; ++j){
-            cout<<"start/stop: "<<start<<" "<<stop<<endl;
             long desV = g.ei[j];
-            if(!vChecked[desV] && vExist[desV])
+            if(!undirected)
+                Es.push_back(edge(curV,desV));
+            else if(!vChecked[desV] && vExist[desV])
                 Es.push_back(edge(curV,desV));
         }
         vChecked[curV] = true;
@@ -170,9 +185,9 @@ void induceEdges(vector<long> &Vs, graph &g, bool* vExist, vector<edge> &Es, lon
 
 void writeGraph(string filename,vector<edge> &Es){
     ofstream out(filename,ofstream::out);
-    vector<edge>::iterator itr;
-    for(itr = Es.begin(); itr!=Es.end(); ++itr){
-        out<<itr->u<<" "<<itr->v<<endl;
+    int i;
+    for(i=0; i<Es.size(); ++i){
+        out<<Es[i].u<<" "<<Es[i].v<<endl;
     }
     out.close();
 }
