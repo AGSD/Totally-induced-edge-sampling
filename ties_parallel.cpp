@@ -9,8 +9,8 @@
 #include<vector>
 #include<random>
 #include<string>
-#include<atomic>
 #include<cstdio>
+#include<ctime>
 
 //For verbose comments
 #define vbs(x) x
@@ -42,13 +42,13 @@ struct graph{
 };
 
 bool undirected = false;
-atomic<long> currentVsize(0);
+long currentVsize=0;
 long requiredVsize;
 
 long inputGraph(string, vector<edge>&);
 void make_csr(vector<edge>,graph&,long,long);
-vector<long> sampleEdges(vector<edge>&, atomic<bool>*, long, long, double, long, long);
-vector<edge> induceEdges(long*, graph&, atomic<bool>*, long, long, long);
+vector<long> sampleEdges(vector<edge>&, bool*, long, long, double, long, long);
+vector<edge> induceEdges(long*, graph&, bool*, long, long, long);
 void writeGraph(string,edge*, long);
 void parseCommandlineArgs(int,char* [], string&, string&, double&);
 
@@ -78,8 +78,8 @@ int main(int argc, char* argv[]) {
 	else
 		g.ei = new long[m+1]();
 		
-    atomic<bool> *vExist = new atomic<bool>[n+1]();
-    atomic<long> totalNodes(0);
+    bool *vExist = new bool[n+1]();
+    long totalNodes=0;
     requiredVsize = fi*n;
 
 
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     		tmpNodes[i] = sampleEdges(edgeList, vExist, n, m, fi, i, psize);
 			long size = tmpNodes[i].size();
 			tmpNodeSizes[i] = size;
-			atomic_fetch_add(&totalNodes,size);
+			__sync_fetch_and_add(&totalNodes,size);
     	}
     }
    
@@ -130,12 +130,16 @@ int main(int argc, char* argv[]) {
    	
     vbs(cout<<"Sampled edges, #nodes="<<VsSize<<endl;)
 	
-	dbg(printf("Vs values\n");
-	for(long i =0; i<VsSize; ++i){
-		printf("%ld\n",Vs[i]);
-	})
+	dbg(
+	long count = 0;
+	for(long i=0; i<n; ++i){
+		if(vExist[i])
+			count++;
+	}
+	if(count!=VsSize)
+		printf("# of unique nodes = %ld, VsSize = %ld\n",count,VsSize);)
 		
-	atomic<long> totalEdges(0);
+	long totalEdges=0;
 	vector<edge> tmpEdges[NUM_THREADS];
 	long *tmpEdgeSizes = new long[NUM_THREADS]();
 	long *tmpEdgeStart = new long[NUM_THREADS]();
@@ -149,7 +153,7 @@ int main(int argc, char* argv[]) {
     		tmpEdges[i] = induceEdges(Vs, g, vExist, VsSize, i, psize);
     		long size = tmpEdges[i].size();
 			tmpEdgeSizes[i] = size;
-			atomic_fetch_add(&totalEdges,size);
+			__sync_fetch_and_add(&totalEdges,size);
     	}
     }
     
@@ -176,15 +180,15 @@ int main(int argc, char* argv[]) {
    		for(long i=0; i<NUM_THREADS; ++i){
    			long start = tmpEdgeStart[i];
    			long end = start+tmpEdges[i].size();
+   			dbg(printf("%ld %ld\n",start,end);)
    			for(long j=start; j<end; ++j)
    				Es[j] = tmpEdges[i][j-start];
    		}
    	}
-
-    
+   	    
     vbs(cout<<"Induced edges, final count is "<<VsSize<<" nodes, and "<<EsSize<<" edges"<<endl;)
 
-    //writeGraph(outFilename, Es, EsSize);
+    writeGraph(outFilename, Es, EsSize);
     vbs(cout<<"Output graph written to "<<outFilename<<endl;)
 
     return 0;
@@ -251,8 +255,8 @@ void make_csr(vector<edge> el, graph &g, long n, long m){
         g.vi[n+1] = m+1;
 }
 
-vector<long> sampleEdges(vector<edge> &el, atomic<bool>* vExist, long n, long m, double fi, long pnum, long psize){
-    default_random_engine generator;
+vector<long> sampleEdges(vector<edge> &el, bool* vExist, long n, long m, double fi, long pnum, long psize){
+    default_random_engine generator((unsigned int)time(0));
     long rnd;
     long lastValid = el.size()-1;
     long start = pnum*psize;
@@ -269,12 +273,14 @@ vector<long> sampleEdges(vector<edge> &el, atomic<bool>* vExist, long n, long m,
         long u = el[rnd].u;
         long v = el[rnd].v;
         bool expected = false;
-        if(vExist[u].compare_exchange_strong(expected,true)){
+        //if(vExist[u].compare_exchange_strong(expected,true)){
+        if(__sync_bool_compare_and_swap(vExist+u,false,true)){    
             //vExist[u] = true;
             Vtmp.push_back(u);
         }
         expected = false;
-        if(vExist[v].compare_exchange_strong(expected,true)){
+        //if(vExist[v].compare_exchange_strong(expected,true)){
+        if(__sync_bool_compare_and_swap(vExist+v,false,true)){    
             //vExist[v] = true;
             Vtmp.push_back(v);
         }
@@ -284,7 +290,7 @@ vector<long> sampleEdges(vector<edge> &el, atomic<bool>* vExist, long n, long m,
         ++counter;
         
         if(counter >= UPDATE_COUNTER){
-        	currentOld = atomic_fetch_add(&currentVsize,counter);
+        	currentOld = __sync_fetch_and_add(&currentVsize,counter);
         	if(currentOld+counter > requiredVsize)
         		break;
         	counter = 0;
@@ -294,7 +300,7 @@ vector<long> sampleEdges(vector<edge> &el, atomic<bool>* vExist, long n, long m,
     return Vtmp;
 }
 
-vector<edge> induceEdges(long *Vs, graph &g, atomic<bool>* vExist, long VsSize, long pnum, long psize){
+vector<edge> induceEdges(long *Vs, graph &g, bool* vExist, long VsSize, long pnum, long psize){
     long i,j;
     
     long start = pnum*psize;
@@ -321,6 +327,7 @@ vector<edge> induceEdges(long *Vs, graph &g, atomic<bool>* vExist, long VsSize, 
 void writeGraph(string filename,edge *Es, long EsSize){
     ofstream out(filename,ofstream::out);
     long i;
+    dbg(printf("EsSize at end = %ld\n",EsSize);)
     for(i=0; i<EsSize; ++i){
         out<<Es[i].u<<" "<<Es[i].v<<endl;
     }
