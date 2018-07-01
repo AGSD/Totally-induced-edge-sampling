@@ -108,8 +108,7 @@ long inputGraph(string filename, vector<edge> &el){ //creates the edge list in t
     long maxNode = 0;
     long currentMax;
 
-    while(!in.eof()){
-        in>>a>>b;
+    while(in>>a>>b){
         el.push_back(edge(a,b));
         maxNode = max(maxNode,max(a,b));
     }
