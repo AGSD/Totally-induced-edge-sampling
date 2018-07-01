@@ -2,11 +2,15 @@
 Implementation of TIES graph sampling algorithm, sourced from https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=2743&context=cstech, which has been optimised by making use a compressed sparse row representation of the graph.
 
 ties_sequential uses the TIES algorithm to find a sample from a given input graph.
+
 Usage: ties_sequential inputFilename outputFilename samplingRatio
+
 Compile: g++ -std=c++11 ties_sequential.cpp -o ties_sequential.o
 
 ties_parallel works the same, but makes use of multiple threads to sample the graph and induce edges.
+
 Usage: ties_parallel inputFilename outputFilename samplingRatio
+
 Compile: g++ -std=c++11 -fopenmp ties_parallel.cpp -o ties_parallel.o
 
 The code expects the following input file conventions:
