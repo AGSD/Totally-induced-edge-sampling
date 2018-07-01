@@ -12,7 +12,7 @@
 #include<cstdio>
 #include<ctime>
 
-//For verbose comments
+//Toggle for verbose comments
 #define vbs(x) x
 //Number of threads to use
 #define NUM_THREADS 8
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 
 	make_csr(edgeList, g, n, m);
 	
-	long psize = NUM_THREADS==1? m: m/(NUM_THREADS-1);
+	long psize = (m+NUM_THREADS-1)/NUM_THREADS;
 	vector<long> tmpNodes[NUM_THREADS];	//individual vectors for each thread
 	long *tmpNodeSizes = new long[NUM_THREADS]();
 	long *tmpNodeStart = new long[NUM_THREADS]();
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
 	vector<edge> tmpEdges[NUM_THREADS];
 	long *tmpEdgeSizes = new long[NUM_THREADS]();
 	long *tmpEdgeStart = new long[NUM_THREADS]();
-	psize = NUM_THREADS==1? VsSize: VsSize/(NUM_THREADS-1);
+	psize = (VsSize+NUM_THREADS-1)/NUM_THREADS;
 	
 	//Induce edges in parallel
     #pragma omp parallel shared(tmpEdges,tmpEdgeSizes,Vs,g,vExist,n,m,psize)
