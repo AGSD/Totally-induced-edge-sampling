@@ -19,7 +19,7 @@
 //Number of additions in a sampling thread, after which we make an update to the total
 #define UPDATE_COUNTER 20
 //Toggle Debugging
-#define dbg(x) x
+#define dbg(x)
 
 using namespace std;
 
@@ -81,11 +81,11 @@ int main(int argc, char* argv[]) {
     bool *vExist = new bool[n+1]();
     long totalNodes=0;
     requiredVsize = fi*n;
-
+	dbg(printf("required size = %ld\n",requiredVsize);)
 
 	make_csr(edgeList, g, n, m);
 	
-	long psize = m/(NUM_THREADS-1);
+	long psize = NUM_THREADS==1? m: m/(NUM_THREADS-1);
 	vector<long> tmpNodes[NUM_THREADS];	//individual vectors for each thread
 	long *tmpNodeSizes = new long[NUM_THREADS]();
 	long *tmpNodeStart = new long[NUM_THREADS]();
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
 	vector<edge> tmpEdges[NUM_THREADS];
 	long *tmpEdgeSizes = new long[NUM_THREADS]();
 	long *tmpEdgeStart = new long[NUM_THREADS]();
-	psize = VsSize/(NUM_THREADS-1);
+	psize = NUM_THREADS==1? VsSize: VsSize/(NUM_THREADS-1);
 	
 	//Induce edges in parallel
     #pragma omp parallel shared(tmpEdges,tmpEdgeSizes,Vs,g,vExist,n,m,psize)
@@ -159,8 +159,6 @@ int main(int argc, char* argv[]) {
     
 	const long EsSize = totalEdges;
 	edge *Es = new edge[totalEdges];
-	
-	dbg(cout<<"Induced"<<endl;)
 	
 	//Calculating starting point for copying different vectors to Es
    	for(long i=1; i<NUM_THREADS; ++i)
@@ -266,33 +264,32 @@ vector<long> sampleEdges(vector<edge> &el, bool* vExist, long n, long m, double 
 	vector<long> Vtmp;
 	long counter=0;
 	long currentOld;
-	
+		
     while(start < end){
         uniform_int_distribution<long> distribution(start,end);
         rnd = distribution(generator);
         long u = el[rnd].u;
         long v = el[rnd].v;
-        bool expected = false;
-        //if(vExist[u].compare_exchange_strong(expected,true)){
+
         if(__sync_bool_compare_and_swap(vExist+u,false,true)){    
-            //vExist[u] = true;
             Vtmp.push_back(u);
+			++counter;
         }
-        expected = false;
-        //if(vExist[v].compare_exchange_strong(expected,true)){
+   
         if(__sync_bool_compare_and_swap(vExist+v,false,true)){    
-            //vExist[v] = true;
             Vtmp.push_back(v);
+			++counter;
         }
 
         swap(el[end],el[rnd]);
         --end;
-        ++counter;
         
         if(counter >= UPDATE_COUNTER){
         	currentOld = __sync_fetch_and_add(&currentVsize,counter);
-        	if(currentOld+counter > requiredVsize)
+        	if(currentOld+counter > requiredVsize){
+        		dbg(printf("killing thread %ld, with Vtmp size %ld\n",currentOld,Vtmp.size());)
         		break;
+        	}
         	counter = 0;
         }
     }

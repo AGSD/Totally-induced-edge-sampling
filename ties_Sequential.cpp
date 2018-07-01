@@ -9,6 +9,7 @@
 #include<vector>
 #include<random>
 #include<string>
+#include<ctime>
 
 //For verbose comments
 #define vbs(x) x
@@ -60,7 +61,11 @@ int main(int argc, char* argv[]) {
 
 	graph g;
 	g.vi = new int[n+2]();
-	g.ei = new int[2*m+1]();
+	if(undirected)
+		g.ei = new int[2*m+1]();
+	else
+		g.ei = new int[m+1]();
+	
     bool *vExist = new bool[n+1]();
 
 	make_csr(edgeList, g, n, m);
@@ -141,7 +146,7 @@ void make_csr(vector<edge> el, graph &g, long n, long m){
 }
 
 void sampleEdges(vector<edge> &el, vector<long> &Vs, bool* vExist, long n, long m, double fi){
-    default_random_engine generator;
+    default_random_engine generator(time(0));
     long rnd;
     long lastValid = el.size()-1;
 
