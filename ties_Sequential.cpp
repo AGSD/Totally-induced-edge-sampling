@@ -192,7 +192,7 @@ void writeGraph(string filename,vector<edge> &Es){
     ofstream out(filename,ofstream::out);
     int i;
     for(i=0; i<Es.size(); ++i){
-        out<<Es[i].u<<" "<<Es[i].v<<endl;
+        out<<Es[i].u<<" "<<Es[i].v<<'\n';
     }
     out.close();
 }

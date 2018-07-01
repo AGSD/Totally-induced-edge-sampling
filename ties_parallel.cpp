@@ -326,7 +326,7 @@ void writeGraph(string filename,edge *Es, long EsSize){
     long i;
     dbg(printf("EsSize at end = %ld\n",EsSize);)
     for(i=0; i<EsSize; ++i){
-        out<<Es[i].u<<" "<<Es[i].v<<endl;
+        out<<Es[i].u<<" "<<Es[i].v<<'\n';
     }
     out.close();
 }
