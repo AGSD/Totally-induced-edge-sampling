@@ -1,5 +1,5 @@
 # Totally-induced-edge-sampling
-Implementation of TIES graph sampling algorithm, sourced from https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=2743&context=cstech, which has been optimised by making use a compressed sparse row representation of the graph.usage
+Implementation of TIES graph sampling algorithm, sourced from https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=2743&context=cstech, which has been optimised by making use a compressed sparse row representation of the graph.
 
 ties_sequential uses the TIES algorithm to find a sample from a given input graph.
 Usage: ties_sequential inputFilename outputFilename samplingRatio
@@ -18,5 +18,4 @@ The code runs on the data and creates an output file with a similar edge notatio
 The code works with the c++11 standard, and OpenMP for the parallel code.
 
 The sample datasets used are sourced from http://konect.uni-koblenz.de/networks/
-The file datasetsInfo.txt has some basic information about the sample data sets. The files have been slightly modified to adhere
-to the aformentioned format.
+The file datasetsInfo.txt has some basic information about the sample data sets. The files have been slightly modified to adhere to the aformentioned format.
