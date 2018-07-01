@@ -194,7 +194,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	vbs(cout<<"Induced edges, final count is "<<VsSize<<" vertices, and "<<EsSize<<" edges"<<endl;)
     
     	//releasing memory before exiting function
-    	delete vExist, tmpNodeSizes, tmpNodeStart, Vs, tmpEdgeSize, tmpEdgeStart;
+    	delete vExist, tmpNodeSizes, tmpNodeStart, Vs, tmpEdgeSizes, tmpEdgeStart;
     
 	return pair<edge*,long>(Es,EsSize);
 }
