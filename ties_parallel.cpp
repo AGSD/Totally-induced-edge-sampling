@@ -214,7 +214,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 
 void parseCommandlineArgs(int argc, char* argv[], string &in, string &out, double &fi){
     if(argc != 4){
-        cout<<"Usage: ties_sequential inputFilename outputFilename samplingRatio [-u (flag for undirected graph)]";
+        cout<<"Usage: ties_sequential inputFilename outputFilename samplingRatio";
         exit(1);
     }
     in = argv[1];
