@@ -17,7 +17,7 @@
 //Toggle for verbose comments
 #define vbs(x)
 //Number of threads to use
-#define NUM_THREADS 8
+#define NUM_THREADS 1
 //Number of additions in a sampling thread, after which we make an update to the total
 #define UPDATE_COUNTER 20
 //Toggle Debugging output
@@ -105,6 +105,10 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	//initialising global variables
 	currentVsize = 0;
 	requiredVsize = fi*n;
+	    
+    //Timekeeping
+    double start,stop,total=0;
+    
 	
 	long m = edgeList.size();					//number of edges in original graph
 	bool *vExist = new bool[n+1]();				//set to true for each vertex which is sampled
@@ -117,6 +121,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	long *tmpNodeStart = new long[NUM_THREADS]();	//Starting index for copying vertices from each thread
 	long psize = (m+NUM_THREADS-1)/NUM_THREADS;		//partition size for each thread sampling edges
 	
+	start = omp_get_wtime();
 	//Sample edges in parallel
 	#pragma omp parallel shared(edgeList, vExist, n, m, fi, psize, tmpNodes, tmpNodeSizes) num_threads(NUM_THREADS)
 	{
@@ -128,6 +133,8 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 		__sync_fetch_and_add(&totalNodes,size);
 		}
 	}
+	stop = omp_get_wtime();
+	total = stop-start;
 
 	const long VsSize = totalNodes;			//Size of Vs
 	long *Vs = new long[VsSize]();			//Array of sampled vertices
@@ -143,6 +150,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    	for(long i=0; i<NUM_THREADS; ++i)
    		printf("%ld %ld\n",tmpNodeStart[i],tmpNodes[i].size());)
    	
+   	start = omp_get_wtime();
    	//Copy values to Vs in parallel from all vectors
    	#pragma omp parallel shared(Vs, tmpNodes, tmpNodeSizes)
    	{
@@ -154,8 +162,10 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    				Vs[j] = tmpNodes[i][j-start];
    		}
    	}
+	stop = omp_get_wtime();
+	total += stop-start;
    	
-    	vbs(cout<<"Sampled edges, number of vertices="<<VsSize<<endl;)
+  	vbs(cout<<"Sampled edges, number of vertices="<<VsSize<<endl;)
 		
 	long totalEdges=0;								//number of edges induced
 	vector<edge> tmpEdges[NUM_THREADS];				//vector for each thread inducing edges
@@ -163,6 +173,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	long *tmpEdgeStart = new long[NUM_THREADS]();	//Starting index for copying edges from each thread
 	psize = (VsSize+NUM_THREADS-1)/NUM_THREADS;		//partition size for each thread inducing edges
 	
+	start = omp_get_wtime();
 	//Induce edges in parallel
     	#pragma omp parallel shared(tmpEdges,tmpEdgeSizes,Vs,g,vExist,n,m,psize)
     	{
@@ -174,6 +185,9 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 			__sync_fetch_and_add(&totalEdges,size);
     		}
     	}
+    	
+	stop = omp_get_wtime();
+	total += stop-start;
     
 	const long EsSize = totalEdges;			//Size of Es
 	edge *Es = new edge[totalEdges];		//Array of induced edges
@@ -189,6 +203,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    	for(long i=0; i<NUM_THREADS; ++i)
    		printf("%ld %ld\n",tmpEdgeStart[i],tmpEdges[i].size());)
 	 
+	start = omp_get_wtime();
     	//Copy values to Es in parallel from all vectors
    	#pragma omp parallel shared(Es, tmpEdges, tmpEdgeSizes)
    	{
@@ -201,12 +216,15 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    				Es[j] = tmpEdges[i][j-start];
    		}
    	}
+   	
+	stop = omp_get_wtime();
+	total += stop-start;
    	    
 	vbs(cout<<"Induced edges, final count is "<<VsSize<<" vertices, and "<<EsSize<<" edges"<<endl;)
     
     	//releasing memory before exiting function
     	delete vExist, tmpNodeSizes, tmpNodeStart, Vs, tmpEdgeSizes, tmpEdgeStart;
-    
+    printf("%lf ",total*1000);
 	return pair<edge*,long>(Es,EsSize);
 }
 
