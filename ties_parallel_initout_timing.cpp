@@ -46,6 +46,13 @@ struct graph{
 long currentVsize=0;	//currently number of sampled nodes
 long requiredVsize;		//Required subsample size(number of vertices)
 graph g;				//csr version of graph
+bool *vExist;			//set to true for each vertex which is sampled
+long *Vs;				//Array of sampled vertices
+edge *Es;				//Array of induced edges
+long *tmpNodeSizes = new long[NUM_THREADS]();	//Number of sampled vertices by each thread
+long *tmpNodeStart = new long[NUM_THREADS]();	//Starting index for copying vertices from each thread
+long *tmpEdgeSizes = new long[NUM_THREADS]();	//Number of induced edges for each thread
+long *tmpEdgeStart = new long[NUM_THREADS]();	//Starting index for copying edges from each thread
 
 long inputGraph(string, vector<edge>&);								//extract graph from input file
 void make_csr(vector<edge>,long,long);								//convert graph to compressed sparse row format
@@ -82,22 +89,21 @@ int main(int argc, char* argv[]) {
     vbs(printf("Input succeeded, graph has %ld vertices and %ld edges\n",n,m);)
 
     make_csr(inputEdgeList, n, m);				//convert graph to csr format(helps in induction)
+	vExist = new bool[n+1]();
+	Vs = new long[n+1]();
+	Es = new edge[m+1]();
 	
-	//Timed function starting
+	double avg=0;
+	printf("Threads: %d\n",NUM_THREADS);
+    for(long i=0; i<10; ++i){
     start = omp_get_wtime();
     sampled = sampleGraph(inputEdgeList,fi,n);	//sample the graph using fi
     stop = omp_get_wtime();
-    //Timed function ending
+    printf("%lf\n",(stop-start)*1000);
+    avg += (stop-start);
+    }
     
-    sampledEdgeList = sampled.first;
-    sampledSize = sampled.second;
-    
-    writeGraph(outFilename, sampledEdgeList, sampledSize);	//write sampled graph to file
-    delete sampledEdgeList;						//free up memory after the graph is written
-
-    vbs(printf("Output graph written to %s\n",outFilename.c_str());)
-    
-    printf("Time taken in sampling: %lf milliseconds, with %d threads\n",(stop-start)*1000,NUM_THREADS);
+    printf("Average: %lf\n",avg/10*1000);
     
     return 0;
 }
@@ -109,14 +115,13 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	requiredVsize = fi*n;
 	
 	long m = edgeList.size();					//number of edges in original graph
-	bool *vExist = new bool[n+1]();				//set to true for each vertex which is sampled
+	
 
 	dbg(printf("required size = %ld\n",requiredVsize);)
 
     long totalNodes=0;								//Number of sampled vertices
 	vector<long> tmpNodes[NUM_THREADS];				//individual vectors for each thread
-	long *tmpNodeSizes = new long[NUM_THREADS]();	//Number of sampled vertices by each thread
-	long *tmpNodeStart = new long[NUM_THREADS]();	//Starting index for copying vertices from each thread
+	
 	long psize = (m+NUM_THREADS-1)/NUM_THREADS;		//partition size for each thread sampling edges
 	
 	//Sample edges in parallel
@@ -132,7 +137,6 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	}
 
 	const long VsSize = totalNodes;			//Size of Vs
-	long *Vs = new long[VsSize]();			//Array of sampled vertices
    	
    	//Calculating starting point for copying different vectors to Vs
    	for(long i=1; i<NUM_THREADS; ++i)
@@ -157,12 +161,10 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    		}
    	}
    	
-    	vbs(cout<<"Sampled edges, number of vertices="<<VsSize<<endl;)
+    vbs(cout<<"Sampled edges, number of vertices="<<VsSize<<endl;)
 		
 	long totalEdges=0;								//number of edges induced
 	vector<edge> tmpEdges[NUM_THREADS];				//vector for each thread inducing edges
-	long *tmpEdgeSizes = new long[NUM_THREADS]();	//Number of induced edges for each thread
-	long *tmpEdgeStart = new long[NUM_THREADS]();	//Starting index for copying edges from each thread
 	psize = (VsSize+NUM_THREADS-1)/NUM_THREADS;		//partition size for each thread inducing edges
 	
 	//Induce edges in parallel
@@ -178,7 +180,6 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	}
     
 	const long EsSize = totalEdges;			//Size of Es
-	edge *Es = new edge[totalEdges];		//Array of induced edges
 	
 	//Calculating starting point for copying different vectors to Es
    	for(long i=1; i<NUM_THREADS; ++i)
@@ -191,7 +192,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    	for(long i=0; i<NUM_THREADS; ++i)
    		printf("%ld %ld\n",tmpEdgeStart[i],tmpEdges[i].size());)
 	 
-    	//Copy values to Es in parallel from all vectors
+    //Copy values to Es in parallel from all vectors
    	#pragma omp parallel shared(Es, tmpEdges, tmpEdgeSizes)
    	{
    		#pragma omp for
@@ -203,11 +204,11 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    				Es[j] = tmpEdges[i][j-start];
    		}
    	}
-   	    
+   	//reset vExist
+   	for(long i=0; i<VsSize; ++i){
+   		vExist[Vs[i]] = false;
+   	}
 	vbs(cout<<"Induced edges, final count is "<<VsSize<<" vertices, and "<<EsSize<<" edges"<<endl;)
-    
-    	//releasing memory before exiting function
-    	delete vExist, tmpNodeSizes, tmpNodeStart, Vs, tmpEdgeSizes, tmpEdgeStart;
     
 	return pair<edge*,long>(Es,EsSize);
 }
