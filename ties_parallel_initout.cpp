@@ -153,7 +153,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    		printf("%ld %ld\n",tmpNodeStart[i],tmpNodes[i].size());)
    	
    	//Copy values to Vs in parallel from all vectors
-   	#pragma omp parallel shared(Vs, tmpNodes, tmpNodeSizes)
+   	#pragma omp parallel shared(Vs, tmpNodes, tmpNodeSizes) num_threads(NUM_THREADS)
    	{
    		#pragma omp for
    		for(long i=0; i<NUM_THREADS; ++i){
@@ -171,7 +171,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
 	psize = (VsSize+NUM_THREADS-1)/NUM_THREADS;		//partition size for each thread inducing edges
 	
 	//Induce edges in parallel
-	#pragma omp parallel shared(tmpEdges,tmpEdgeSizes,Vs,g,vExist,n,m,psize)
+	#pragma omp parallel shared(tmpEdges,tmpEdgeSizes,Vs,g,vExist,n,m,psize) num_threads(NUM_THREADS)
 	{
 		#pragma omp for
 		for(long i=0; i<NUM_THREADS; ++i){
@@ -196,7 +196,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    		printf("%ld %ld\n",tmpEdgeStart[i],tmpEdges[i].size());)
 	 
     //Copy values to Es in parallel from all vectors
-   	#pragma omp parallel shared(Es, tmpEdges, tmpEdgeSizes)
+   	#pragma omp parallel shared(Es, tmpEdges, tmpEdgeSizes) num_threads(NUM_THREADS)
    	{
    		#pragma omp for
    		for(long i=0; i<NUM_THREADS; ++i){
@@ -207,6 +207,7 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    				Es[j] = tmpEdges[i][j-start];
    		}
    	}
+   	
    	//reset vExist
    	for(long i=0; i<VsSize; ++i){
    		vExist[Vs[i]] = false;

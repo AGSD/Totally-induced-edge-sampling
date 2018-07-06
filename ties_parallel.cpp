@@ -15,7 +15,7 @@
 #include<utility>
 
 //Toggle for verbose comments
-#define vbs(x)
+#define vbs(x) x
 //Number of threads to use
 #define NUM_THREADS 8
 //Number of additions in a sampling thread, after which we make an update to the total
