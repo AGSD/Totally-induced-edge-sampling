@@ -205,9 +205,18 @@ pair<edge*,long> sampleGraph(vector<edge> &edgeList, double fi, long n){
    		}
    	}
    	//reset vExist
-   	for(long i=0; i<VsSize; ++i){
-   		vExist[Vs[i]] = false;
-   	}
+   	#pragma omp parallel shared(Vs,vExist,psize) num_threads(NUM_THREADS)
+	{
+	   	#pragma omp for
+	   	for(long i=0; i<NUM_THREADS; ++i){
+	   		long start = i*psize;
+	   	    long end = start+psize-1;
+		    end = end>VsSize-1 ? VsSize-1: end;
+			   	for(long j=start; j<end; ++j){
+			   		vExist[Vs[i]] = false;
+			   	}
+	   	}
+	}
 	vbs(cout<<"Induced edges, final count is "<<VsSize<<" vertices, and "<<EsSize<<" edges"<<endl;)
     
 	return pair<edge*,long>(Es,EsSize);
